@@ -8,7 +8,7 @@ from allennlp.service.predictors.predictor import Predictor
 
 @Predictor.register('etd-abstract-predictor')
 class EtdAbstractPredictor(Predictor):
-    """"Predictor wrapper for the ToxicCommentsClassifier"""
+    """"Predictor wrapper for the EtdRNN/EtdTransformer"""
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
         abstract_text = json_dict['abstract_text']
@@ -52,7 +52,7 @@ class EtdAbstractPredictor(Predictor):
     
 @Predictor.register('etd-title-abstract-predictor')
 class EtdTitleAsbtractPredictor(Predictor):
-    """"Predictor wrapper for the ToxicCommentsClassifier"""
+    """"Predictor wrapper for the EtdBCN"""
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
         title_text = json_dict['title_text']

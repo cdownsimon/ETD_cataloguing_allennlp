@@ -20,21 +20,13 @@ from my_library.models.etd_biattention import BiAttentionEncoder
 @Model.register("etd_bcn")
 class EtdBCN(Model):
     """
-    This ``Model`` performs text classification for an academic paper.  We assume we're given a
-    title and an abstract, and we predict some output label.
-    The basic model structure: we'll embed the title and the abstract, and encode each of them with
-    separate Seq2VecEncoders, getting a single vector representing the content of each.  We'll then
-    concatenate those two vectors, and pass the result through a feedforward network, the output of
-    which we'll use as our scores for each label.
-    Parameters
-    ----------
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
         Used to embed the ``tokens`` ``TextField`` we get as input to the model.
-    title_encoder : ``Seq2VecEncoder``
+    title_text_encoder : ``Seq2VecEncoder``
         The encoder that we will use to convert the title to a vector.
-    abstract_encoder : ``Seq2VecEncoder``
+    abstract_text_encoder : ``Seq2VecEncoder``
         The encoder that we will use to convert the abstract to a vector.
     classifier_feedforward : ``FeedForward``
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
@@ -87,24 +79,6 @@ class EtdBCN(Model):
                 abstract_text: Dict[str, torch.LongTensor],
                 label: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
-        """
-        Parameters
-        ----------
-        title : Dict[str, Variable], required
-            The output of ``TextField.as_array()``.
-        abstract : Dict[str, Variable], required
-            The output of ``TextField.as_array()``.
-        label : Variable, optional (default = None)
-            A variable representing the label for each instance in the batch.
-        Returns
-        -------
-        An output dictionary consisting of:
-        class_probabilities : torch.FloatTensor
-            A tensor of shape ``(batch_size, num_classes)`` representing a distribution over the
-            label classes for each instance.
-        loss : torch.FloatTensor, optional
-            A scalar loss to be optimised.
-        """
         embedded_title_text = self.text_field_embedder(title_text)
         title_text_mask = util.get_text_field_mask(title_text)
         encoded_title_text = self.abstract_text_encoder(embedded_title_text, title_text_mask)        

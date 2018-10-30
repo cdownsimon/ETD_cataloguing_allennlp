@@ -1,5 +1,3 @@
-# follow https://arxiv.org/pdf/1708.00107.pdf section 5
-
 from typing import Sequence, Union
 
 import torch
@@ -15,25 +13,7 @@ from allennlp.modules.matrix_attention.linear_matrix_attention import LinearMatr
 
 class BiAttentionEncoder(torch.nn.Module):
     """
-    This ``Module`` is a feed-forward neural network, just a sequence of ``Linear`` layers with
-    activation functions in between.
-    Parameters
-    ----------
-    input_dim : ``int``
-        The dimensionality of the input.  We assume the input has shape ``(batch_size, input_dim)``.
-    num_layers : ``int``
-        The number of ``Linear`` layers to apply to the input.
-    hidden_dims : ``Union[int, Sequence[int]]``
-        The output dimension of each of the ``Linear`` layers.  If this is a single ``int``, we use
-        it for all ``Linear`` layers.  If it is a ``Sequence[int]``, ``len(hidden_dims)`` must be
-        ``num_layers``.
-    activations : ``Union[Callable, Sequence[Callable]]``
-        The activation function to use after each ``Linear`` layer.  If this is a single function,
-        we use it after all ``Linear`` layers.  If it is a ``Sequence[Callable]``,
-        ``len(activations)`` must be ``num_layers``.
-    dropout : ``Union[float, Sequence[float]]``, optional
-        If given, we will apply this amount of dropout after each layer.  Semantics of ``float``
-        versus ``Sequence[float]`` is the same as with other parameters.
+    A Bi-attentive classification network follow https://arxiv.org/pdf/1708.00107.pdf section 5
     """
     def __init__(self,
                  input_dim: int,

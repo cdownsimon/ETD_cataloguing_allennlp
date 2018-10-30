@@ -24,23 +24,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("etd_title_abstract")
 class EtdTitleAbstractReader(DatasetReader):
     """
-    Reads a CSV-lines file containing toxic comments from the kaggle Toxic predict competation, and creates a
-    dataset suitable for toxic classification using these comments.
-    Expected format for each input line: "id","comment_text","toxic","severe_toxic","obscene","threat","insult","identity_hate"
-    The CSV could have other fields, too, but they are ignored.
-    The output of ``read`` is a list of ``Instance`` s with the fields:
-        id: ``MetadataField``
-        comment_text: ``TextField``
-        label[is toxic]: ``LabelField``
-    where the ``label`` is derived from the value of the toxic.
-    Parameters
-    ----------
-    tokenizer : ``Tokenizer``, optional
-        Tokenizer to use to split the title and abstrct into words or other kinds of tokens.
-        Defaults to ``WordTokenizer()``.
-    token_indexers : ``Dict[str, TokenIndexer]``, optional
-        Indexers used to define input token representations. Defaults to ``{"tokens":
-        SingleIdTokenIndexer()}``.
+    Reads a JSON-lines file containing title and abstract from ETD records
     """
     def __init__(self,
                  tokenizer: Tokenizer = None,
