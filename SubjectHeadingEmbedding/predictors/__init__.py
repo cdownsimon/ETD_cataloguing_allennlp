@@ -1,0 +1,1 @@
+from my_library.predictors.etd_predictor import EtdClassifierPredictor

@@ -1,0 +1,92 @@
+{
+  "dataset_reader": {
+    "type": "etd_records",
+    "lazy": true,
+    "token_indexers": {
+        "elmo": {
+            "type": "elmo_characters"
+        },
+        "token_characters": {
+            "type": "characters",
+            "character_tokenizer": {
+                "byte_encoding": "utf-8",
+                "end_tokens": [
+                    260
+                ],
+                "start_tokens": [
+                    259
+                ]
+            }
+        }
+    }
+  },
+  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/all_etd_train.json",
+  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/cuhk_etd_validate.json",
+  "model": {
+    "type": "etd_classifier",
+    "text_field_embedder": {
+        "elmo": {
+            "type": "elmo_token_embedder",
+            "do_layer_norm": false,
+            "dropout": 0.2,
+            "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+            "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
+        },
+        "token_characters": {
+            "type": "character_encoding",
+            "dropout": 0.2,
+            "embedding": {
+                "embedding_dim": 20,
+                "num_embeddings": 262
+            },
+            "encoder": {
+                "type": "cnn",
+                "embedding_dim": 20,
+                "ngram_filter_sizes": [
+                    5
+                ],
+                "num_filters": 100
+            }
+        }
+    },
+    "abstract_text_encoder": {
+      "type": "gru",
+      "bidirectional": true,
+      "input_size": 1124,
+      "hidden_size": 100,
+      "num_layers": 1,
+      "dropout": 0.2
+    },
+    "classifier_feedforward": {
+      "input_dim": 200,
+      "num_layers": 2,
+      "hidden_dims": [400, 47343],
+      "activations": ["relu", "linear"],
+      "dropout": [0.2, 0.0]
+    }
+  },
+  "iterator": {
+    "type": "bucket",
+    "max_instances_in_memory": 1000,
+    "sorting_keys": [["abstract_text", "num_tokens"]],
+    "batch_size": 4
+  },
+  "trainer": {
+    "num_epochs": 40,
+    "cuda_device": 1,
+    "learning_rate_scheduler": {
+        "type": "reduce_on_plateau",
+        "factor": 0.5,
+        "mode": "max",
+        "patience": 3
+    },
+    "optimizer": {
+        "type": "sgd",
+        "lr": 0.01,
+        "momentum": 0.3
+    },
+    "patience": 10,
+    "grad_clipping": 5.0,
+    "validation_metric": "+roc_auc_score",
+  }
+}

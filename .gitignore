@@ -1,0 +1,5 @@
+*checkpoint*
+*.pyc
+result/*
+word_vector/*
+/*.json
