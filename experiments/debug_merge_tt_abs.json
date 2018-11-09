@@ -1,24 +1,13 @@
 {
   "dataset_reader": {
     "type": "etd_abstract",
+    "merge_title_abstract": true,
     "lazy": true,
     "token_indexers": {
-        "token_characters": {
-            "type": "characters",
-            "character_tokenizer": {
-                "byte_encoding": "utf-8",
-                "end_tokens": [
-                    260
-                ],
-                "start_tokens": [
-                    259
-                ]
-            }
-        },
         "glove_tokens": {
             "type": "single_id",
             "lowercase_tokens": true
-        },
+        }/*,
         "conceptnet_tokens":{
             "type": "single_id",
             "lowercase_tokens": true            
@@ -26,36 +15,20 @@
         "fasttext_tokens":{
             "type": "single_id",
             "lowercase_tokens": true               
-        }
+        }*/
     }
   },
-  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/all_etd_abstract_train.json",
-  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/cuhk_etd_abstract_validate.json",
+  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/etd_title_abstract_debug.json",
+  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/etd_title_abstract_debug.json",
   "model": {
-    "type": "etd_rnn",
+    "type": "etd_allennlp_bcn",
     "text_field_embedder": {
-        "token_characters": {
-            "type": "character_encoding",
-            "dropout": 0.2,
-            "embedding": {
-                "embedding_dim": 20,
-                "num_embeddings": 262
-            },
-            "encoder": {
-                "type": "cnn",
-                "embedding_dim": 20,
-                "ngram_filter_sizes": [
-                    5
-                ],
-                "num_filters": 100
-            }
-        },
         "glove_tokens": {
             "type": "embedding",
-            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.6B.100d.txt",
-            "embedding_dim": 100,
+            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.840B.300d.txt",
+            "embedding_dim": 300,
             "trainable": false
-        },
+        }/*,
         "conceptnet_tokens": {
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/conceptnet/numberbatch-en-17.06.txt",
@@ -67,40 +40,54 @@
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/fasttext/crawl-300d-2M.vec",
             "embedding_dim": 300,
             "trainable": false
-        }
+        }*/
     },
-    "abstract_text_encoder": {
+    "embedding_dropout": 0.0,
+    "pre_encode_feedforward": {
+        "input_dim": 300,
+        "num_layers": 1,
+        "hidden_dims": [300],
+        "activations": ["relu"],
+        "bias": [true],
+        "dropout": [0.2]
+    },
+    "encoder": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 800,
-      "hidden_size": 400,
+      "input_size": 300,
+      "hidden_size": 300,
       "num_layers": 1,
       "dropout": 0.2
     },
-    "attention_encoder": {
-      "input_dim": 800,
-      "combination": "x,y"
-    }, 
-    "classifier_feedforward": {
-      "input_dim": 800,
+    "integrator": {
+      "type": "gru",
+      "bidirectional": true,
+      "input_size": 1800,
+      "hidden_size": 900,
+      "num_layers": 1,
+      "dropout": 0.2
+    },
+    "integrator_dropout": 0.2,
+    "output_layer": {
+      "input_dim": 7200,
       "num_layers": 2,
-      "hidden_dims": [800, 47343],
+      "hidden_dims": [7200, 241],
       "activations": ["relu", "linear"],
       "bias": [true, true],
       "dropout": [0.2, 0.0]
     },
-    "use_positional_encoding": true
+    "elmo": null
   },
   "iterator": {
     "type": "bucket",
     "max_instances_in_memory": 10000,
     "sorting_keys": [["abstract_text", "num_tokens"]],
-    "batch_size": 2
+    "batch_size": 4
   },
   "trainer": {
     "num_epochs": 100,
-    "num_batches_before_step": 512,
-    "cuda_device": 3,
+    "num_batches_before_step": 16,
+    "cuda_device": 1,
     /*"learning_rate_scheduler": {
         "type": "reduce_on_plateau",
         "factor": 0.5,

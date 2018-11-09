@@ -15,6 +15,7 @@ from allennlp.nn import util
 from allennlp.training.metrics import BooleanAccuracy
 
 from my_library.metrics.roc_auc_score import RocAucScore
+from my_library.metrics.hit_at_k import *
 from my_library.models.etd_attention import AttentionEncoder
 
 @Model.register("etd_transformer")

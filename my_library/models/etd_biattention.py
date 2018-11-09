@@ -17,7 +17,9 @@ class BiAttentionEncoder(torch.nn.Module):
     """
     def __init__(self,
                  input_dim: int,
-                 integrator: Seq2SeqEncoder,
+                 integrator_x: Seq2SeqEncoder,
+                 integrator_y: Seq2SeqEncoder,
+                 tie_integrator: bool = False,
                  integrator_dropout: float = 0.0,
                  combination: str = 'x,y') -> None:
 
@@ -25,11 +27,14 @@ class BiAttentionEncoder(torch.nn.Module):
         
         self._self_attention = LinearMatrixAttention(input_dim, input_dim, combination)
 
-        self._integrator = integrator
+        self._integrator_x = integrator_x
+        self._integrator_y = integrator_y
+        if tie_integrator:
+            self._integrator_y = self._integrator_x
         self._integrator_dropout = torch.nn.Dropout(integrator_dropout)
         
-        self._x_linear_layers = torch.nn.Linear(integrator.get_output_dim() , 1)
-        self._y_linear_layers = torch.nn.Linear(integrator.get_output_dim(), 1)
+        self._x_linear_layers = torch.nn.Linear(integrator_x.get_output_dim() , 1)
+        self._y_linear_layers = torch.nn.Linear(integrator_y.get_output_dim(), 1)
         
         self._output_dim = input_dim
         self.input_dim = input_dim
@@ -66,10 +71,10 @@ class BiAttentionEncoder(torch.nn.Module):
             
         # [B,T,N] -> [B,T,3N]
         x_attend_y = torch.cat((inputs_x,inputs_x-context_y,inputs_x*context_y),dim=2)
-        x_attend_y = self._integrator(x_attend_y, inputs_x_mask)
+        x_attend_y = self._integrator_x(x_attend_y, inputs_x_mask)
         # [B,L,N] -> [B,L,3N]
         y_attend_x = torch.cat((inputs_y,inputs_y-context_x,inputs_y*context_x),dim=2)
-        y_attend_x = self._integrator(y_attend_x, inputs_y_mask)
+        y_attend_x = self._integrator_y(y_attend_x, inputs_y_mask)
         
         # [B,T,3N] -> [B,T,1]
         weights = self._x_linear_layers(x_attend_y)
@@ -99,11 +104,15 @@ class BiAttentionEncoder(torch.nn.Module):
     @classmethod
     def from_params(cls, params: Params):
         input_dim = params.pop_int('input_dim')
-        integrator = Seq2SeqEncoder.from_params(params.pop("integrator"))
+        integrator_x = Seq2SeqEncoder.from_params(params.pop("integrator_x"))
+        integrator_y = Seq2SeqEncoder.from_params(params.pop("integrator_y"))
+        tie_integrator = params.pop('tie_integrator', False)
         integrator_dropout = params.pop_float('integrator_dropout', 0.0)
         combination = params.pop('combination', 'x,y')
         params.assert_empty(cls.__name__)
         return cls(input_dim=input_dim,
-                   integrator=integrator,
+                   integrator_x=integrator_x,
+                   integrator_y=integrator_y,
+                   tie_integrator = tie_integrator,
                    integrator_dropout=integrator_dropout,
                    combination=combination)

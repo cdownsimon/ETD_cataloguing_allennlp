@@ -15,6 +15,8 @@ from allennlp.nn import util
 from allennlp.training.metrics import BooleanAccuracy
 
 from my_library.metrics.roc_auc_score import RocAucScore
+from my_library.metrics.hit_at_k import *
+from my_library.metrics.macro_f1 import MacroF1Measure
 from my_library.models.etd_attention import AttentionEncoder
 
 @Model.register("etd_rnn")
@@ -56,7 +58,11 @@ class EtdRNN(Model):
                                                             abstract_text_encoder.get_input_dim()))
 
         self.metrics = {
-#                 "roc_auc_score": RocAucScore()
+#                 "roc_auc_score": RocAucScore()            
+            "hit_5": HitAtK(5),
+            "hit_10": HitAtK(10),
+            "hit_100": HitAtK(100),
+            "marco_f1": MacroF1Measure(top_k=5,num_label=self.num_classes)
         }
         
         self.loss = torch.nn.BCEWithLogitsLoss(pos_weight = torch.ones(self.num_classes)*10)
@@ -107,6 +113,14 @@ class EtdRNN(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metric_dict = {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
+#         metric_dict = {}
+#         metric_dict['hit_5'] = self.metrics['hit_5'].get_metric(reset)
+#         metric_dict['hit_10'] = self.metrics['hit_10'].get_metric(reset)
+#         metric_dict['hit_100'] = self.metrics['hit_100'].get_metric(reset)
+#         macro_measure = self.metrics['marco_measure'].get_metric(reset)
+#         metric_dict['mac_prec'] = macro_measure[0]
+#         metric_dict['mac_rec'] = macro_measure[1]
+#         metric_dict['mac_f1'] = macro_measure[2]
         return metric_dict
 
     @classmethod

@@ -54,19 +54,19 @@
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.6B.100d.txt",
             "embedding_dim": 100,
-            "trainable": false
+            "trainable": true
         },
         "conceptnet_tokens": {
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/conceptnet/numberbatch-en-17.06.txt",
             "embedding_dim": 300,
-            "trainable": false
+            "trainable": true
         },
         "fasttext_tokens": {
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/fasttext/crawl-300d-2M.vec",
             "embedding_dim": 300,
-            "trainable": false
+            "trainable": true
         }
     },
     "abstract_text_encoder": {
@@ -99,8 +99,8 @@
   },
   "trainer": {
     "num_epochs": 100,
-    "num_batches_before_step": 512,
-    "cuda_device": 3,
+    "num_batches_before_step": 2048,
+    "cuda_device": 0,
     /*"learning_rate_scheduler": {
         "type": "reduce_on_plateau",
         "factor": 0.5,

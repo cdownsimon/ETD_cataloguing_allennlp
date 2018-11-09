@@ -1,0 +1,127 @@
+{
+    "dataset_reader": {
+        "type": "etd_abstract",
+        "lazy": true,
+        "token_indexers": {
+            "conceptnet_tokens": {
+                "type": "single_id",
+                "lowercase_tokens": true
+            },
+            "fasttext_tokens": {
+                "type": "single_id",
+                "lowercase_tokens": true
+            },
+            "glove_tokens": {
+                "type": "single_id",
+                "lowercase_tokens": true
+            },
+            "token_characters": {
+                "type": "characters",
+                "character_tokenizer": {
+                    "byte_encoding": "utf-8",
+                    "end_tokens": [
+                        260
+                    ],
+                    "start_tokens": [
+                        259
+                    ]
+                }
+            }
+        }
+    },
+    "iterator": {
+        "type": "bucket",
+        "batch_size": 4,
+        "max_instances_in_memory": 10000,
+        "sorting_keys": [
+            [
+                "abstract_text",
+                "num_tokens"
+            ]
+        ]
+    },
+    "model": {
+        "type": "etd_rnn",
+        "abstract_text_encoder": {
+            "type": "gru",
+            "bidirectional": true,
+            "dropout": 0.2,
+            "hidden_size": 400,
+            "input_size": 800,
+            "num_layers": 1
+        },
+        "attention_encoder": {
+            "combination": "x,y",
+            "input_dim": 800
+        },
+        "classifier_feedforward": {
+            "activations": [
+                "relu",
+                "linear"
+            ],
+            "bias": [
+                true,
+                true
+            ],
+            "dropout": [
+                0.2,
+                0
+            ],
+            "hidden_dims": [
+                800,
+                47343
+            ],
+            "input_dim": 800,
+            "num_layers": 2
+        },
+        "text_field_embedder": {
+            "conceptnet_tokens": {
+                "type": "embedding",
+                "embedding_dim": 300,
+                "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/conceptnet/numberbatch-en-17.06.txt",
+                "trainable": false
+            },
+            "fasttext_tokens": {
+                "type": "embedding",
+                "embedding_dim": 300,
+                "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/fasttext/crawl-300d-2M.vec",
+                "trainable": false
+            },
+            "glove_tokens": {
+                "type": "embedding",
+                "embedding_dim": 100,
+                "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.6B.100d.txt",
+                "trainable": false
+            },
+            "token_characters": {
+                "type": "character_encoding",
+                "dropout": 0.2,
+                "embedding": {
+                    "embedding_dim": 20,
+                    "num_embeddings": 262
+                },
+                "encoder": {
+                    "type": "cnn",
+                    "embedding_dim": 20,
+                    "ngram_filter_sizes": [
+                        5
+                    ],
+                    "num_filters": 100
+                }
+            }
+        },
+        "use_positional_encoding": true
+    },
+    "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/all_etd_abstract_train.json",
+    "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/cuhk_etd_abstract_validate.json",
+    "trainer": {
+        "cuda_device": 2,
+        "grad_clipping": 5,
+        "num_batches_before_step": 256,
+        "num_epochs": 100,
+        "optimizer": {
+            "type": "adam"
+        },
+        "patience": 10
+    }
+}

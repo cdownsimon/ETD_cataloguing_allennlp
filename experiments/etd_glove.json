@@ -44,27 +44,27 @@
         },
         "glove_tokens": {
             "type": "embedding",
-            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.6B.100d.txt",
-            "embedding_dim": 100,
+            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.840B.300d.txt",
+            "embedding_dim": 300,
             "trainable": false
         }
     },
     "abstract_text_encoder": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 200,
-      "hidden_size": 100,
+      "input_size": 400,
+      "hidden_size": 200,
       "num_layers": 1,
       "dropout": 0.2
     },
     "attention_encoder": {
-      "input_dim": 200,
+      "input_dim": 400,
       "combination": "x,y"
     }, 
     "classifier_feedforward": {
-      "input_dim": 200,
+      "input_dim": 400,
       "num_layers": 2,
-      "hidden_dims": [200, 47343],
+      "hidden_dims": [400, 47343],
       "activations": ["relu", "linear"],
       "bias": [true, true],
       "dropout": [0.2, 0.0]
@@ -75,11 +75,11 @@
     "type": "bucket",
     "max_instances_in_memory": 10000,
     "sorting_keys": [["abstract_text", "num_tokens"]],
-    "batch_size": 4
+    "batch_size": 2
   },
   "trainer": {
     "num_epochs": 100,
-    "num_batches_before_step": 1024,
+    "num_batches_before_step": 2048,
     "cuda_device": 0,
     /*"learning_rate_scheduler": {
         "type": "reduce_on_plateau",

@@ -69,29 +69,53 @@
             "trainable": false
         }
     },
+    "title_text_projection":{
+      "input_dim": 800,
+      "num_layers": 1,
+      "hidden_dims": [400],
+      "activations": ["relu"],
+      "bias": [true],
+      "dropout": [0.2]
+    },
+    "abstract_text_projection":{
+      "input_dim": 800,
+      "num_layers": 1,
+      "hidden_dims": [400],
+      "activations": ["relu"],
+      "bias": [true],
+      "dropout": [0.2]        
+    },
     "title_text_encoder": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 800,
-      "hidden_size": 400,
+      "input_size": 400,
+      "hidden_size": 200,
       "num_layers": 1,
       "dropout": 0.2
     },
     "abstract_text_encoder": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 800,
-      "hidden_size": 400,
+      "input_size": 400,
+      "hidden_size": 200,
       "num_layers": 1,
       "dropout": 0.2
     },
     "attention_encoder": {
-        "input_dim": 800,
-        "integrator": {
+        "input_dim": 400,
+        "integrator_x": {
             "type": "gru",
             "bidirectional": true,
-            "input_size": 2400,
-            "hidden_size": 1200,
+            "input_size": 1200,
+            "hidden_size": 600,
+            "num_layers": 1,
+            "dropout": 0.2
+        },
+        "integrator_y": {
+            "type": "gru",
+            "bidirectional": true,
+            "input_size": 1200,
+            "hidden_size": 600,
             "num_layers": 1,
             "dropout": 0.2
         },
@@ -99,9 +123,9 @@
         "combination": "x,y"
     }, 
     "classifier_feedforward": {
-      "input_dim": 4800,
+      "input_dim": 2400,
       "num_layers": 2,
-      "hidden_dims": [4800, 47719],
+      "hidden_dims": [2400, 47719],
       "activations": ["relu", "linear"],
       "bias": [true, true],
       "dropout": [0.2, 0.0]

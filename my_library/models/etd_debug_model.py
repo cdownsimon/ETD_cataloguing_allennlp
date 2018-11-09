@@ -17,18 +17,16 @@ from allennlp.training.metrics import BooleanAccuracy
 from my_library.metrics.roc_auc_score import RocAucScore
 from my_library.metrics.hit_at_k import *
 from my_library.metrics.macro_f1 import MacroF1Measure
-from my_library.models.etd_biattention import BiAttentionEncoder
+from my_library.models.etd_attention import AttentionEncoder
 
-@Model.register("etd_bcn")
-class EtdBCN(Model):
+@Model.register("etd_debug_model")
+class EtdDebugModel(Model):
     """
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
         Used to embed the ``tokens`` ``TextField`` we get as input to the model.
-    title_text_encoder : ``Seq2VecEncoder``
-        The encoder that we will use to convert the title to a vector.
-    abstract_text_encoder : ``Seq2VecEncoder``
+    abstract_encoder : ``Seq2VecEncoder``
         The encoder that we will use to convert the abstract to a vector.
     classifier_feedforward : ``FeedForward``
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
@@ -38,49 +36,25 @@ class EtdBCN(Model):
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 title_text_projection: FeedForward,
-                 abstract_text_projection: FeedForward,
-                 title_text_encoder: Seq2SeqEncoder,
                  abstract_text_encoder: Seq2SeqEncoder,
-                 bi_attention_encoder: BiAttentionEncoder,
+                 attention_encoder: AttentionEncoder,
                  classifier_feedforward: FeedForward,
                  use_positional_encoding: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(EtdBCN, self).__init__(vocab, regularizer)
+        super(EtdDebugModel, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
-        self.title_text_projection = title_text_projection
-        self.abstract_text_projection = abstract_text_projection
-        self.title_text_encoder = title_text_encoder
         self.abstract_text_encoder = abstract_text_encoder
-        self.bi_attention_encoder = bi_attention_encoder
+        self.attention_encoder = attention_encoder
         self.classifier_feedforward = classifier_feedforward
         self.use_positional_encoding = use_positional_encoding
 
-        if text_field_embedder.get_output_dim() != title_text_projection.get_input_dim():
+        if text_field_embedder.get_output_dim() != abstract_text_encoder.get_input_dim():
             raise ConfigurationError("The output dimension of the text_field_embedder must match the "
-                                     "input dimension of the title_text_projection. Found {} and {}, "
-                                     "respectively.".format(text_field_embedder.get_output_dim(),
-                                                            title_text_projection.get_input_dim()))
-        
-        if text_field_embedder.get_output_dim() != abstract_text_projection.get_input_dim():
-            raise ConfigurationError("The output dimension of the text_field_embedder must match the "
-                                     "input dimension of the abstract_text_projection. Found {} and {}, "
-                                     "respectively.".format(text_field_embedder.get_output_dim(),
-                                                            abstract_text_projection.get_input_dim()))
-            
-        if title_text_projection.get_output_dim() != title_text_encoder.get_input_dim():
-            raise ConfigurationError("The output dimension of the title_text_projection must match the "
-                                     "input dimension of the title_text_encoder. Found {} and {}, "
-                                     "respectively.".format(title_text_projection.get_output_dim(),
-                                                            title_text_encoder.get_input_dim()))
-        
-        if abstract_text_projection.get_output_dim() != abstract_text_encoder.get_input_dim():
-            raise ConfigurationError("The output dimension of the abstract_text_projection must match the "
                                      "input dimension of the abstract_text_encoder. Found {} and {}, "
-                                     "respectively.".format(abstract_text_projection.get_output_dim(),
+                                     "respectively.".format(text_field_embedder.get_output_dim(),
                                                             abstract_text_encoder.get_input_dim()))
 
         self.metrics = {
@@ -97,28 +71,18 @@ class EtdBCN(Model):
 
     @overrides
     def forward(self,  # type: ignore
-                title_text: Dict[str, torch.LongTensor],
                 abstract_text: Dict[str, torch.LongTensor],
                 label: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
-        embedded_title_text = self.text_field_embedder(title_text)
-        title_text_mask = util.get_text_field_mask(title_text) 
-        projected_title_text = self.title_text_projection(embedded_title_text)
-        encoded_title_text = self.abstract_text_encoder(projected_title_text, title_text_mask)
-        
         embedded_abstract_text = self.text_field_embedder(abstract_text)
         abstract_text_mask = util.get_text_field_mask(abstract_text)
-        projected_abstract_text = self.abstract_text_projection(embedded_abstract_text)
-        encoded_abstract_text = self.abstract_text_encoder(projected_abstract_text, abstract_text_mask)
+        encoded_abstract_text = self.abstract_text_encoder(embedded_abstract_text, abstract_text_mask)
 
         if self.use_positional_encoding:
-            encoded_title_text = util.add_positional_features(encoded_title_text)
             encoded_abstract_text = util.add_positional_features(encoded_abstract_text)
         
-        attended_text = self.bi_attention_encoder(encoded_title_text,encoded_abstract_text,
-                                                  title_text_mask,abstract_text_mask)
-        
-        outputs = self.classifier_feedforward(attended_text)
+        attended_abstract_text = self.attention_encoder(encoded_abstract_text, abstract_text_mask)
+        outputs = self.classifier_feedforward(attended_abstract_text)
         logits = torch.sigmoid(outputs)
         logits = logits.unsqueeze(0) if len(logits.size()) < 2 else logits
         output_dict = {'logits': logits}
@@ -149,17 +113,22 @@ class EtdBCN(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metric_dict = {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
+#         metric_dict = {}
+#         metric_dict['hit_5'] = self.metrics['hit_5'].get_metric(reset)
+#         metric_dict['hit_10'] = self.metrics['hit_10'].get_metric(reset)
+#         metric_dict['hit_100'] = self.metrics['hit_100'].get_metric(reset)
+#         macro_measure = self.metrics['marco_measure'].get_metric(reset)
+#         metric_dict['mac_prec'] = macro_measure[0]
+#         metric_dict['mac_rec'] = macro_measure[1]
+#         metric_dict['mac_f1'] = macro_measure[2]
         return metric_dict
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'EtdBCN':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'EtdDebugModel':
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)
-        title_text_encoder = Seq2SeqEncoder.from_params(params.pop("title_text_encoder"))
         abstract_text_encoder = Seq2SeqEncoder.from_params(params.pop("abstract_text_encoder"))
-        title_text_projection = FeedForward.from_params(params.pop("title_text_projection"))
-        abstract_text_projection = FeedForward.from_params(params.pop("abstract_text_projection"))
-        bi_attention_encoder = BiAttentionEncoder.from_params(params.pop("attention_encoder"))
+        attention_encoder = AttentionEncoder.from_params(params.pop("attention_encoder"))
         classifier_feedforward = FeedForward.from_params(params.pop("classifier_feedforward"))
         use_positional_encoding = params.pop("use_positional_encoding", False)
 
@@ -168,11 +137,8 @@ class EtdBCN(Model):
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
-                   title_text_encoder=title_text_encoder,
                    abstract_text_encoder=abstract_text_encoder,
-                   title_text_projection=title_text_projection,
-                   abstract_text_projection=abstract_text_projection,
-                   bi_attention_encoder=bi_attention_encoder,
+                   attention_encoder=attention_encoder,
                    classifier_feedforward=classifier_feedforward,
                    use_positional_encoding=use_positional_encoding,
                    initializer=initializer,

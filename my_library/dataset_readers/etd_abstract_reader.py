@@ -29,12 +29,14 @@ class EtdAbstractReader(DatasetReader):
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
+                 merge_title_abstract: bool = False,
                  lazy: bool = False,
                  start_tokens: List[str] = ["<start>"], 
                  end_tokens: List[str] = ["<end>"]) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer(start_tokens=start_tokens,end_tokens=end_tokens)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self._merge_title_abstract = merge_title_abstract
         
     @overrides
     def _read(self, file_path: str) -> Iterable[Instance]:
@@ -45,7 +47,10 @@ class EtdAbstractReader(DatasetReader):
                 if not line:
                     continue
                 etd_json = json.loads(line)
-                abstract = etd_json['etdAbstract']
+                if self._merge_title_abstract and 'etdTitle' in  etd_json:
+                    abstract = '%s %s'%(etd_json['etdTitle'],etd_json['etdAbstract'])
+                else:
+                    abstract = etd_json['etdAbstract']
                 labels = etd_json['lcsh']
 
                 yield self.text_to_instance(abstract, labels)

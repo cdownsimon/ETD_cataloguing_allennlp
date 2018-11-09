@@ -79,7 +79,7 @@
   },
   "trainer": {
     "num_epochs": 100,
-    "num_batches_before_step": 1024,
+    "num_batches_before_step": 256,
     "cuda_device": 1,
     /*"learning_rate_scheduler": {
         "type": "reduce_on_plateau",
