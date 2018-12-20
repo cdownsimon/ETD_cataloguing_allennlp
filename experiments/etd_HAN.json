@@ -1,7 +1,15 @@
 {
   "dataset_reader": {
-    "type": "etd_abstract",
+    "type": "etd_HAN_abstract",
+    // "merge_title_abstract": true,
     "lazy": true,
+    "tokenizer": {
+        "word_splitter": {
+            "type": "just_spaces"
+        },
+        "start_tokens": ["<start>"],
+        "end_tokens": ["<end>"]
+    },
     "token_indexers": {
         "token_characters": {
             "type": "characters",
@@ -19,20 +27,16 @@
             "type": "single_id",
             "lowercase_tokens": true
         },
-        /*"conceptnet_tokens":{
-            "type": "single_id",
-            "lowercase_tokens": true            
-        },*/
         "fasttext_tokens":{
             "type": "single_id",
             "lowercase_tokens": true               
         }
     }
   },
-  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/all_etd_abstract_train.json",
-  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/cuhk_etd_abstract_validate.json",
+  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/all_etd_splitted_abstract_train.json",
+  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/cuhk_etd_splitted_abstract_validate.json",
   "model": {
-    "type": "etd_rnn",
+    "type": "etd_HAN",
     "text_field_embedder": {
         "token_characters": {
             "type": "character_encoding",
@@ -54,54 +58,54 @@
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.840B.300d.txt",
             "embedding_dim": 300,
-            "trainable": true
+            "trainable": false
         },
-        /*"conceptnet_tokens": {
-            "type": "embedding",
-            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/conceptnet/numberbatch-en-17.06.txt",
-            "embedding_dim": 300,
-            "trainable": true
-        },*/
         "fasttext_tokens": {
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/fasttext/crawl-300d-2M.vec",
             "embedding_dim": 300,
-            "trainable": true
+            "trainable": false
         }
     },
-    "abstract_text_encoder": {
+    "word_encoder": {
       "type": "gru",
       "bidirectional": true,
       "input_size": 700,
-      "hidden_size": 700,
+      "hidden_size": 256,
+      "num_layers": 1,
+      "dropout": 0.2
+    },    
+    "sentence_encoder": {
+      "type": "gru",
+      "bidirectional": true,
+      "input_size": 512,
+      "hidden_size": 256,
       "num_layers": 1,
       "dropout": 0.2
     },
-    "attention_encoder": {
-      "input_dim": 1400,
-      "combination": "x,y"
-    }, 
     "classifier_feedforward": {
       "type": "feedforward",
-      "input_dim": 1400,
+      "input_dim": 512,
       "num_layers": 2,
-      "hidden_dims": [1400, 47343],
+      "hidden_dims": [256, 47073],
       "activations": ["relu", "linear"],
       "bias": [true, true],
       "dropout": [0.2, 0.0]
     },
+    "attended_text_dropout": 0.2,
+    "bce_pos_weight": 10,
     "use_positional_encoding": true
   },
   "iterator": {
     "type": "bucket",
     "max_instances_in_memory": 50000,
-    "sorting_keys": [["abstract_text", "num_tokens"]],
-    "batch_size": 2
+    "sorting_keys": [["abstract_text", "list_num_tokens"], ["abstract_text", "num_fields"]],
+    "batch_size": 1
   },
   "trainer": {
     "num_epochs": 100,
-    "num_batches_before_step": 2048,
-    "cuda_device": 0,
+    "num_batches_before_step": 32,
+    "cuda_device": 1,
     "learning_rate_scheduler": {
         "type": "reduce_on_plateau",
         "factor": 0.5,
@@ -111,7 +115,7 @@
     "optimizer": {
         "type": "adam",
         "lr": 0.001,
-        //"momentum": 0.5
+        // "momentum": 0.5
     },
     "patience": 10,
     "grad_clipping": 5.0

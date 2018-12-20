@@ -1,5 +1,6 @@
 from typing import List, Dict, Iterable
 import json
+import itertools
 import logging
 
 from overrides import overrides
@@ -21,12 +22,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # from multi_toxic_label.fields.multi_label_field import MultiLabelField
 
-@DatasetReader.register("etd_abstract")
-class EtdAbstractReader(DatasetReader):
+@DatasetReader.register("etd_HMCN_abstract")
+class EtdHMCNAbstractReader(DatasetReader):
     """
     Reads a CSV-lines file containing abstract only from ETD records
     """
     def __init__(self,
+                 class_index_dir: str,
+                 sh_path_dir: str,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  merge_title_abstract: bool = False,
@@ -37,6 +40,17 @@ class EtdAbstractReader(DatasetReader):
         self._tokenizer = tokenizer or WordTokenizer(start_tokens=start_tokens,end_tokens=end_tokens)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._merge_title_abstract = merge_title_abstract
+        
+        with open(class_index_dir,'r') as f:
+            self._class_to_idx = json.load(f)
+            self._idx_to_class = {i:c for c,i in self._class_to_idx.items()}
+        self._num_classes = len(self._class_to_idx)
+        
+        with open(sh_path_dir,'r') as d:
+            self._subject_paths = {}
+            lines = d.readlines()
+            for l in lines:
+                self._subject_paths.update(json.loads(l.strip()))
         
     @overrides
     def _read(self, file_path: str) -> Iterable[Instance]:
@@ -63,7 +77,16 @@ class EtdAbstractReader(DatasetReader):
         fields = {'abstract_text': abstract_text_field}
         
         if labels is not None:
-            fields['label'] = MultiLabelField([label for label,value in labels.items() if value == 1])
+            global_labels = [label for label,value in labels.items() if value == 1]
+            local_label = set(itertools.chain(*[self._subject_paths[l] for l in global_labels]))
+            fields['local_label'] = MultiLabelField([self._class_to_idx[l] for l in local_label],
+                                                    label_namespace='local_labels',
+                                                    skip_indexing=True,
+                                                    num_labels=self._num_classes)
+            fields['global_label'] = MultiLabelField([self._class_to_idx[l] for l in global_labels],
+                                                     label_namespace='global_labels',
+                                                     skip_indexing=True,
+                                                     num_labels=self._num_classes)
                 
         return Instance(fields)
 

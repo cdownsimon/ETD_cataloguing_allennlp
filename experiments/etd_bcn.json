@@ -19,18 +19,18 @@
             "type": "single_id",
             "lowercase_tokens": true
         },
-        "conceptnet_tokens":{
+        /*"conceptnet_tokens":{
             "type": "single_id",
             "lowercase_tokens": true
-        },
+        },*/
         "fasttext_tokens":{
             "type": "single_id",
             "lowercase_tokens": true
         }
     }
   },
-  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/all_etd_title_abstract_train.json",
-  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/cuhk_etd_title_abstract_validate.json",
+  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/all_etd_title_abstract_train_new.json",
+  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/cuhk_etd_title_abstract_validate_new.json",
   "model": {
     "type": "etd_bcn",
     "text_field_embedder": {
@@ -52,16 +52,16 @@
         },
         "glove_tokens": {
             "type": "embedding",
-            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.6B.100d.txt",
-            "embedding_dim": 100,
+            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.840B.300d.txt",
+            "embedding_dim": 300,
             "trainable": false
         },
-        "conceptnet_tokens": {
+        /*"conceptnet_tokens": {
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/conceptnet/numberbatch-en-17.06.txt",
             "embedding_dim": 300,
             "trainable": false
-        },
+        },*/
         "fasttext_tokens": {
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/fasttext/crawl-300d-2M.vec",
@@ -70,52 +70,52 @@
         }
     },
     "title_text_projection":{
-      "input_dim": 800,
+      "input_dim": 700,
       "num_layers": 1,
-      "hidden_dims": [400],
+      "hidden_dims": [256],
       "activations": ["relu"],
       "bias": [true],
       "dropout": [0.2]
     },
     "abstract_text_projection":{
-      "input_dim": 800,
+      "input_dim": 700,
       "num_layers": 1,
-      "hidden_dims": [400],
+      "hidden_dims": [256],
       "activations": ["relu"],
       "bias": [true],
       "dropout": [0.2]        
     },
     "title_text_encoder": {
-      "type": "gru",
+      "type": "lstm",
       "bidirectional": true,
-      "input_size": 400,
-      "hidden_size": 200,
+      "input_size": 256,
+      "hidden_size": 128,
       "num_layers": 1,
       "dropout": 0.2
     },
     "abstract_text_encoder": {
-      "type": "gru",
+      "type": "lstm",
       "bidirectional": true,
-      "input_size": 400,
-      "hidden_size": 200,
+      "input_size": 256,
+      "hidden_size": 128,
       "num_layers": 1,
       "dropout": 0.2
     },
     "attention_encoder": {
-        "input_dim": 400,
+        "input_dim": 256,
         "integrator_x": {
-            "type": "gru",
+            "type": "lstm",
             "bidirectional": true,
-            "input_size": 1200,
-            "hidden_size": 600,
+            "input_size": 768,
+            "hidden_size": 512,
             "num_layers": 1,
             "dropout": 0.2
         },
         "integrator_y": {
-            "type": "gru",
+            "type": "lstm",
             "bidirectional": true,
-            "input_size": 1200,
-            "hidden_size": 600,
+            "input_size": 768,
+            "hidden_size": 512,
             "num_layers": 1,
             "dropout": 0.2
         },
@@ -123,33 +123,36 @@
         "combination": "x,y"
     }, 
     "classifier_feedforward": {
-      "input_dim": 2400,
+      "type": "feedforward",
+      "input_dim": 2048,
       "num_layers": 2,
-      "hidden_dims": [2400, 47719],
+      "hidden_dims": [2048, 47446],
       "activations": ["relu", "linear"],
       "bias": [true, true],
       "dropout": [0.2, 0.0]
-    }
+    },
+    "bce_pos_weight": 20,
+    "use_positional_encoding": true
   },
   "iterator": {
     "type": "bucket",
-    "max_instances_in_memory": 10000,
+    "max_instances_in_memory": 50000,
     "sorting_keys": [["abstract_text", "num_tokens"], ["title_text", "num_tokens"]],
-    "batch_size": 2
+    "batch_size": 4
   },
   "trainer": {
     "num_epochs": 100,
-    "num_batches_before_step": 2048,
+    "num_batches_before_step": 8,
     "cuda_device": 1,
-    /*"learning_rate_scheduler": {
+    "learning_rate_scheduler": {
         "type": "reduce_on_plateau",
         "factor": 0.5,
-        "mode": "max",
+        "mode": "min",
         "patience": 3
-    },*/
+    },
     "optimizer": {
-        "type": "adam"
-        // "lr": 0.01,
+        "type": "adam",
+        "lr": 0.001,
         // "momentum": 0.9
     },
     "patience": 10,

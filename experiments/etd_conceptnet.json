@@ -75,11 +75,11 @@
     "type": "bucket",
     "max_instances_in_memory": 10000,
     "sorting_keys": [["abstract_text", "num_tokens"]],
-    "batch_size": 4
+    "batch_size": 2
   },
   "trainer": {
     "num_epochs": 100,
-    "num_batches_before_step": 256,
+    "num_batches_before_step": 4096,
     "cuda_device": 1,
     /*"learning_rate_scheduler": {
         "type": "reduce_on_plateau",

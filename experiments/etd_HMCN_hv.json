@@ -1,6 +1,8 @@
 {
   "dataset_reader": {
-    "type": "etd_abstract",
+    "type": "etd_HMCN_abstract",
+    "class_index_dir": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/index/all_etd_abstract_class_index.json",
+    "sh_path_dir": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/lcsh/sh_path.json",
     "lazy": true,
     "token_indexers": {
         "token_characters": {
@@ -19,20 +21,17 @@
             "type": "single_id",
             "lowercase_tokens": true
         },
-        /*"conceptnet_tokens":{
-            "type": "single_id",
-            "lowercase_tokens": true            
-        },*/
         "fasttext_tokens":{
             "type": "single_id",
             "lowercase_tokens": true               
         }
     }
   },
-  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/all_etd_abstract_train.json",
-  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/cuhk_etd_abstract_validate.json",
+  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/all_etd_abstract_train_new.json",
+  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/cuhk_etd_abstract_validate_new.json",
   "model": {
-    "type": "etd_rnn",
+    "type": "etd_HMCN",
+    "sh_hierarchy_dir": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/index/all_etd_abstract_hierarchy.json",
     "text_field_embedder": {
         "token_characters": {
             "type": "character_encoding",
@@ -54,43 +53,34 @@
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.840B.300d.txt",
             "embedding_dim": 300,
-            "trainable": true
+            "trainable": false
         },
-        /*"conceptnet_tokens": {
-            "type": "embedding",
-            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/conceptnet/numberbatch-en-17.06.txt",
-            "embedding_dim": 300,
-            "trainable": true
-        },*/
         "fasttext_tokens": {
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/fasttext/crawl-300d-2M.vec",
             "embedding_dim": 300,
-            "trainable": true
+            "trainable": false
         }
     },
     "abstract_text_encoder": {
-      "type": "gru",
+      "type": "lstm",
       "bidirectional": true,
       "input_size": 700,
-      "hidden_size": 700,
+      "hidden_size": 256,
       "num_layers": 1,
       "dropout": 0.2
     },
     "attention_encoder": {
-      "input_dim": 1400,
-      "combination": "x,y"
-    }, 
-    "classifier_feedforward": {
-      "type": "feedforward",
-      "input_dim": 1400,
-      "num_layers": 2,
-      "hidden_dims": [1400, 47343],
-      "activations": ["relu", "linear"],
-      "bias": [true, true],
-      "dropout": [0.2, 0.0]
+      "type": "linear_attention",
+      "input_dim": 512,
+      "combination": "x,y,x*y",
+      "dropout_prob": 0.2
     },
-    "use_positional_encoding": true
+    "hidden_states_dropout": 0.2,
+    "bce_pos_weight": 10,
+    "use_positional_encoding": true,
+    "child_parent_index_pair_dir": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/index/all_etd_abstract_child_parent.csv",
+    "hv_penalty_lambda": 0.1
   },
   "iterator": {
     "type": "bucket",
@@ -100,8 +90,8 @@
   },
   "trainer": {
     "num_epochs": 100,
-    "num_batches_before_step": 2048,
-    "cuda_device": 0,
+    "num_batches_before_step": 16,
+    "cuda_device": 3,
     "learning_rate_scheduler": {
         "type": "reduce_on_plateau",
         "factor": 0.5,
@@ -111,7 +101,7 @@
     "optimizer": {
         "type": "adam",
         "lr": 0.001,
-        //"momentum": 0.5
+        // "momentum": 0.5
     },
     "patience": 10,
     "grad_clipping": 5.0

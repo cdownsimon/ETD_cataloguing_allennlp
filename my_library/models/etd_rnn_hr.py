@@ -19,9 +19,13 @@ from my_library.metrics.hit_at_k import *
 from my_library.metrics.macro_f1 import *
 from my_library.models.etd_attention import AttentionEncoder
 from my_library.models.customized_allennlp.maxout import Maxout
+from my_library.losses.hierarchical_graph import HierarchicalGraph
+from my_library.losses.hierarchical_regularization import HierarchicalRegularization
 
-@Model.register("etd_debug_model")
-class EtdDebugModel(Model):
+import pickle
+
+@Model.register("etd_rnn_hr")
+class EtdRnnHR(Model):
     """
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
@@ -39,11 +43,13 @@ class EtdDebugModel(Model):
                  text_field_embedder: TextFieldEmbedder,
                  abstract_text_encoder: Seq2SeqEncoder,
                  attention_encoder: AttentionEncoder,
-                 classifier_feedforward:  Union[FeedForward, Maxout],
+                 classifier_feedforward: Union[FeedForward, Maxout],
+                 hierarchical_connections_dir: str,
+                 bce_pos_weight: int = 10,
                  use_positional_encoding: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(EtdDebugModel, self).__init__(vocab, regularizer)
+        super(EtdRnnHR, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
@@ -57,17 +63,36 @@ class EtdDebugModel(Model):
                                      "input dimension of the abstract_text_encoder. Found {} and {}, "
                                      "respectively.".format(text_field_embedder.get_output_dim(),
                                                             abstract_text_encoder.get_input_dim()))
+            
+        with open(hierarchical_connections_dir,'rb') as hc:
+            connections = pickle.load(hc)
+            self.hierarchical_graph = HierarchicalGraph(directed=True)
+            self.hierarchical_graph.load(connections)
 
+        class2index = self.vocab.get_token_to_index_vocabulary("labels")
+        class_tokens = class2index.keys()
+        parents_idx, childs_idx = [], []
+        for ct in class_tokens:
+            p = self.hierarchical_graph.get_parents(ct)
+            if p:
+                parents = [class2index[i] for i in p if i in class2index]
+                parents_idx += parents
+                childs_idx += [class2index[ct]] * len(parents)
+        
+        params = [param for n, param in self.classifier_feedforward.named_parameters() if 'weight' in n]
+        classificaiton_W = params[-1]
+        
         self.metrics = {
-#                 "roc_auc_score": RocAucScore()            
+#             "roc_auc_score": RocAucScore()            
             "hit_5": HitAtK(5),
             "hit_10": HitAtK(10),
-            "hit_100": HitAtK(100),
-            "macro_measure": MacroF1Measure(top_k=5,num_label=self.num_classes)
+#             "hit_100": HitAtK(100),
+#             "macro_measure": MacroF1Measure(top_k=5,num_label=self.num_classes)
         }
         
-        self.loss = torch.nn.BCEWithLogitsLoss(pos_weight = torch.ones(self.num_classes)*10)
-
+        self.loss = torch.nn.BCEWithLogitsLoss(pos_weight = torch.ones(self.num_classes)*bce_pos_weight)
+        self.hr = HierarchicalRegularization(classificaiton_W, childs_idx, parents_idx)
+        
         initializer(self)
 
     @overrides
@@ -77,20 +102,19 @@ class EtdDebugModel(Model):
         # pylint: disable=arguments-differ
         embedded_abstract_text = self.text_field_embedder(abstract_text)
         abstract_text_mask = util.get_text_field_mask(abstract_text)
-        encoded_abstract_text = self.abstract_text_encoder(embedded_abstract_text, abstract_text_mask)
-
         if self.use_positional_encoding:
-            encoded_abstract_text = util.add_positional_features(encoded_abstract_text)
+            embedded_abstract_text = util.add_positional_features(embedded_abstract_text)
+        encoded_abstract_text = self.abstract_text_encoder(embedded_abstract_text, abstract_text_mask)
         
         attended_abstract_text = self.attention_encoder(encoded_abstract_text, abstract_text_mask)
         outputs = self.classifier_feedforward(attended_abstract_text)
         logits = torch.sigmoid(outputs)
-        logits = logits.unsqueeze(0) if len(logits.size()) < 2 else logits
+        logits = logits.unsqueeze(0) if logits.dim() < 2 else logits
         output_dict = {'logits': logits}
-
+        
         if label is not None:
-            outputs = outputs.unsqueeze(0) if len(outputs.size()) < 2 else outputs
-            loss = self.loss(outputs, label.squeeze(-1))
+            outputs = outputs.unsqueeze(0) if outputs.dim() < 2 else outputs
+            loss = self.loss(outputs, label.squeeze(-1)) + self.hr()
             for metric in self.metrics.values():
                 metric(logits, label.squeeze(-1))
             output_dict["loss"] = loss
@@ -117,25 +141,31 @@ class EtdDebugModel(Model):
         metric_dict = {}
         metric_dict['hit_5'] = self.metrics['hit_5'].get_metric(reset)
         metric_dict['hit_10'] = self.metrics['hit_10'].get_metric(reset)
-        metric_dict['hit_100'] = self.metrics['hit_100'].get_metric(reset)
-        macro_measure = self.metrics['macro_measure'].get_metric(reset)
+#         metric_dict['hit_100'] = self.metrics['hit_100'].get_metric(reset)
+#         macro_measure = self.metrics['macro_measure'].get_metric(reset)
 #         metric_dict['mac_prec'] = macro_measure[0]
 #         metric_dict['mac_rec'] = macro_measure[1]
-        metric_dict['mac_f1'] = macro_measure[2]
+#         metric_dict['mac_f1'] = macro_measure[2]
         return metric_dict
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'EtdDebugModel':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'EtdRnnHR':
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)
         abstract_text_encoder = Seq2SeqEncoder.from_params(params.pop("abstract_text_encoder"))
-        attention_encoder = AttentionEncoder.from_params(params.pop("attention_encoder"))
+        attention_encoder = params.pop("attention_encoder")
+        if attention_encoder.pop('type') == 'linear_attention':
+            attention_encoder = AttentionEncoder.from_params(attention_encoder)
+        else:
+            attention_encoder = MultiHeadAttentionEncoder.from_params(attention_encoder)
         classifier_feedforward = params.pop("classifier_feedforward")
         if classifier_feedforward.pop('type') == 'feedforward':
             classifier_feedforward = FeedForward.from_params(classifier_feedforward)
         else:
             classifier_feedforward = Maxout.from_params(classifier_feedforward)
+        hierarchical_connections_dir = params.pop("hierarchical_connections_dir")
         use_positional_encoding = params.pop("use_positional_encoding", False)
+        bce_pos_weight = params.pop_int("bce_pos_weight", 10)
 
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
@@ -145,6 +175,8 @@ class EtdDebugModel(Model):
                    abstract_text_encoder=abstract_text_encoder,
                    attention_encoder=attention_encoder,
                    classifier_feedforward=classifier_feedforward,
+                   hierarchical_connections_dir=hierarchical_connections_dir,
+                   bce_pos_weight=bce_pos_weight,
                    use_positional_encoding=use_positional_encoding,
                    initializer=initializer,
                    regularizer=regularizer)

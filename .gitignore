@@ -1,5 +1,6 @@
 *checkpoint*
 *.pyc
+data/*
 result/*
 word_vector/*
 /*.json

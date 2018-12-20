@@ -33,7 +33,7 @@ class BiAttentionEncoder(torch.nn.Module):
             self._integrator_y = self._integrator_x
         self._integrator_dropout = torch.nn.Dropout(integrator_dropout)
         
-        self._x_linear_layers = torch.nn.Linear(integrator_x.get_output_dim() , 1)
+        self._x_linear_layers = torch.nn.Linear(integrator_x.get_output_dim(), 1)
         self._y_linear_layers = torch.nn.Linear(integrator_y.get_output_dim(), 1)
         
         self._output_dim = input_dim

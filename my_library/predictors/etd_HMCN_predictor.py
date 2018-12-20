@@ -8,8 +8,8 @@ from allennlp.service.predictors.predictor import Predictor
 
 import numpy as np
 
-@Predictor.register('etd-abstract-predictor')
-class EtdAbstractPredictor(Predictor):
+@Predictor.register('etd-abstract-HMCN-predictor')
+class EtdAbstractHMCNPredictor(Predictor):
     """"Predictor wrapper for the EtdRNN/EtdTransformer"""
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
@@ -20,7 +20,7 @@ class EtdAbstractPredictor(Predictor):
         instance = self._dataset_reader.text_to_instance(abstract_text=abstract)
 
         # label_dict will be like {0: "toxic", 1: "severe_toxic", ...}
-        label_dict = self._model.vocab.get_index_to_token_vocabulary('labels')
+        label_dict = self._dataset_reader._idx_to_class
         # Convert it to list ["toxic", "severe_toxic", ...]
         all_labels = [label_dict[i] for i in range(len(label_dict))]
 
@@ -76,8 +76,8 @@ class EtdAbstractPredictor(Predictor):
             first_ns.append(sanitize_dict)
         return first_ns
     
-@Predictor.register('etd-title-abstract-predictor')
-class EtdTitleAsbtractPredictor(Predictor):
+@Predictor.register('etd-title-abstract-HMCN-predictor')
+class EtdTitleAsbtractHMCNPredictor(Predictor):
     """"Predictor wrapper for the EtdBCN"""
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
