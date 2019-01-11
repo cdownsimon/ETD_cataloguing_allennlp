@@ -20,8 +20,8 @@
         }
     }
   },
-  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/all_etd_train.json",
-  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/cuhk_etd_validate.json",
+  "train_data_path": "./all_etd_train.json",
+  "validation_data_path": "./cuhk_etd_validate.json",
   "model": {
     "type": "etd_classifier",
     "text_field_embedder": {

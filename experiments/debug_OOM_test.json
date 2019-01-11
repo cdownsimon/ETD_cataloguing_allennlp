@@ -29,8 +29,8 @@
         }
     }
   },
-  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/etd_debug.json",
-  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/etd_debug.json",
+  "train_data_path": "./data/etd_debug.json",
+  "validation_data_path": "./data/etd_debug.json",
   "model": {
     "type": "etd_rnn_sap",
     "text_field_embedder": {
@@ -52,19 +52,19 @@
         },
         "glove_tokens": {
             "type": "embedding",
-            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.840B.300d.txt",
+            "pretrained_file": "./word_vector/glove/glove.840B.300d.txt",
             "embedding_dim": 300,
             "trainable": true
         },
         /*"conceptnet_tokens": {
             "type": "embedding",
-            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/conceptnet/numberbatch-en-17.06.txt",
+            "pretrained_file": "./word_vector/conceptnet/numberbatch-en-17.06.txt",
             "embedding_dim": 300,
             "trainable": false
         },*/
         "fasttext_tokens": {
             "type": "embedding",
-            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/fasttext/crawl-300d-2M.vec",
+            "pretrained_file": "./word_vector/fasttext/crawl-300d-2M.vec",
             "embedding_dim": 300,
             "trainable": true
         }
@@ -106,7 +106,7 @@
       "pool_sizes": [5, 5],
       "dropout": [0.2, 0.0]*/
     },
-    "hierarchical_connections_dir": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/lcsh/authoritiessubjects.connections",
+    "hierarchical_connections_dir": "./data/lcsh/authoritiessubjects.connections",
     "penalty_coef": 0.1,
     "use_positional_encoding": false
   },

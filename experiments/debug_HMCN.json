@@ -1,8 +1,8 @@
 {
   "dataset_reader": {
     "type": "etd_HMCN_abstract",
-    "class_index_dir": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/index/etd_debug_class_index.json",
-    "sh_path_dir": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/lcsh/sh_path.json",
+    "class_index_dir": "./data/index/etd_debug_class_index.json",
+    "sh_path_dir": "./data/lcsh/sh_path.json",
     "lazy": true,
     "token_indexers": {
         "token_characters": {
@@ -27,11 +27,11 @@
         }
     }
   },
-  "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/etd_debug.json",
-  "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/etd_debug.json",
+  "train_data_path": "./data/etd_debug.json",
+  "validation_data_path": "./data/etd_debug.json",
   "model": {
     "type": "etd_HMCN_hier_att",
-    "sh_hierarchy_dir": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/index/etd_debug_hierarchy.json",
+    "sh_hierarchy_dir": "./data/index/etd_debug_hierarchy.json",
     "text_field_embedder": {
         "token_characters": {
             "type": "character_encoding",
@@ -51,13 +51,13 @@
         },
         "glove_tokens": {
             "type": "embedding",
-            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.840B.300d.txt",
+            "pretrained_file": "./word_vector/glove/glove.840B.300d.txt",
             "embedding_dim": 300,
             "trainable": false
         },
         "fasttext_tokens": {
             "type": "embedding",
-            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/fasttext/crawl-300d-2M.vec",
+            "pretrained_file": "./word_vector/fasttext/crawl-300d-2M.vec",
             "embedding_dim": 300,
             "trainable": false
         }
@@ -78,7 +78,7 @@
     },
     "bce_pos_weight": 10,
     "use_positional_encoding": true,
-    // "child_parent_index_pair_dir": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/index/etd_debug_child_parents.csv",
+    // "child_parent_index_pair_dir": "./data/index/etd_debug_child_parents.csv",
     "hv_penalty_lambda": 0.1
   },
   "iterator": {
