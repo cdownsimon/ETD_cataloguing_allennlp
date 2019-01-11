@@ -481,9 +481,9 @@ class HitAtKCPU(Metric):
     def __init__(self, k=5) -> None:
         self._k = k
         self._hit_at_5 = 0.0
-        self._batch_size = 0
-        self._predictions = None
-        self._gold_labels = None
+#         self._batch_size = 0
+#         self._predictions = None
+#         self._gold_labels = None
         self._ttl_size = 0
 
     def __call__(self,
@@ -516,9 +516,14 @@ class HitAtKCPU(Metric):
         predictions = predictions.view(batch_size, -1)
         gold_labels = gold_labels.view(batch_size, -1)
         
-        self._batch_size = batch_size
-        self._predictions = predictions
-        self._gold_labels = gold_labels
+        top_k = predictions.topk(self._k)[0][:,self._k-1]
+        predictions = torch.ge(predictions,top_k.unsqueeze(1).expand(batch_size,gold_labels.size(1))).float()
+        gold_labels = gold_labels.float()
+        self._hit_at_5 += ((gold_labels * predictions).sum(1) / gold_labels.sum(1)).sum()
+        
+#         self._batch_size = batch_size
+#         self._predictions = predictions
+#         self._gold_labels = gold_labels
         self._ttl_size += batch_size
 
     def get_metric(self, reset: bool = False):
@@ -527,12 +532,11 @@ class HitAtKCPU(Metric):
         -------
         The accumulated accuracy.
         """
-        top_k = self._predictions.topk(self._k)[0][:,self._k-1]
-        predictions = torch.ge(self._predictions,top_k.unsqueeze(1).expand(self._batch_size,self._gold_labels.size(1))).float()
-        gold_labels = self._gold_labels.float()
-#         self._hit_at_5 += (((gold_labels + predictions) >= 2).sum(1).float()/gold_labels.sum(1).float()).sum()
-        self._hit_at_5 += ((gold_labels * predictions).sum(1) / gold_labels.sum(1)).sum()
-
+#         top_k = self._predictions.topk(self._k)[0][:,self._k-1]
+#         predictions = torch.ge(self._predictions,top_k.unsqueeze(1).expand(self._batch_size,self._gold_labels.size(1))).float()
+#         gold_labels = self._gold_labels.float()
+#         self._hit_at_5 += ((gold_labels * predictions).sum(1) / gold_labels.sum(1)).sum()
+        
         hit_at_5 = self._hit_at_5 / self._ttl_size
         
         if reset:
@@ -542,7 +546,7 @@ class HitAtKCPU(Metric):
     @overrides
     def reset(self):
         self._hit_at_5 = 0.0
-        self._batch_size = 0
-        self._predictions = None
-        self._gold_labels = None
+#         self._batch_size = 0
+#         self._predictions = None
+#         self._gold_labels = None
         self._ttl_size = 0

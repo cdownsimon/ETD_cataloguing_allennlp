@@ -32,7 +32,7 @@
   "train_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/etd_debug.json",
   "validation_data_path": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/etd_debug.json",
   "model": {
-    "type": "etd_rnn",
+    "type": "etd_rnn_sap",
     "text_field_embedder": {
         "token_characters": {
             "type": "character_encoding",
@@ -54,13 +54,19 @@
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/glove/glove.840B.300d.txt",
             "embedding_dim": 300,
-            "trainable": false
+            "trainable": true
         },
+        /*"conceptnet_tokens": {
+            "type": "embedding",
+            "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/conceptnet/numberbatch-en-17.06.txt",
+            "embedding_dim": 300,
+            "trainable": false
+        },*/
         "fasttext_tokens": {
             "type": "embedding",
             "pretrained_file": "/uac/spc/proj/fpredict/finance/ETD_cataloguing/allennlp-test/word_vector/fasttext/crawl-300d-2M.vec",
             "embedding_dim": 300,
-            "trainable": false
+            "trainable": true
         }
     },
     "abstract_text_encoder": {
@@ -70,20 +76,35 @@
       "hidden_size": 700,
       "num_layers": 1,
       "dropout": 0.2
+      /*"type": "stacked_self_attention",
+      "input_dim": 700,
+      "hidden_dim": 100,
+      "projection_dim": 100,
+      "feedforward_hidden_dim": 100,
+      "num_layers": 8,
+      "num_attention_heads": 4*/
     },
     "attention_encoder": {
-        "type": "max_pool",
-        "mode": "max",
+        "type": "self_attention",
+        "input_dim": 1400,
+        "hidden_dim": 350,
+        "num_hops": 5,
         "dropout_prob": 0.5
     }, 
     "classifier_feedforward": {
       "type": "feedforward",
+      "input_dim": 7000,
+      "num_layers": 3,
+      "hidden_dims": [7000, 40000, 241], // 47343
+      "activations": ["relu", "relu", "linear"],
+      "bias": [true, true, true],
+      "dropout": [0.5, 0.5, 0.0]
+      /*"type": "maxout",
       "input_dim": 1400,
       "num_layers": 2,
-      "hidden_dims": [1400, 1714], // 47343
-      "activations": ["relu", "linear"],
-      "bias": [true, true],
-      "dropout": [0.5, 0.0]
+      "output_dims": [1400, 241],
+      "pool_sizes": [5, 5],
+      "dropout": [0.2, 0.0]*/
     },
     "hierarchical_connections_dir": "/misc/projdata3/info_fil/finance/simon_test/ETD_cataloguing/allennlp-test/data/lcsh/authoritiessubjects.connections",
     "penalty_coef": 0.1,
@@ -93,11 +114,11 @@
     "type": "bucket",
     "max_instances_in_memory": 50000,
     "sorting_keys": [["abstract_text", "num_tokens"]],
-    "batch_size": 2
+    "batch_size": 8
   },
   "trainer": {
-    "num_epochs": 100,
-    "num_batches_before_step": 16,
+    "num_epochs": 2,
+    "num_batches_before_step": 4,
     "cuda_device": 0,
     "learning_rate_scheduler": {
         "type": "reduce_on_plateau",

@@ -17,7 +17,7 @@ class AttentionEncoder(torch.nn.Module):
     def __init__(self,
                  input_dim: int,
                  combination: str = 'x,y',
-                 dropout_prob  = 0.0) -> None:
+                 dropout_prob: float  = 0.0) -> None:
 
         super(AttentionEncoder, self).__init__()
         
@@ -124,7 +124,7 @@ class SelfAttentionEncoder(torch.nn.Module):
 class MultiHeadAttentionEncoder(torch.nn.Module):
     def __init__(self,
                  input_dim: int,
-                 dropout_prob  = 0.0) -> None:
+                 dropout_prob: float = 0.0) -> None:
 
         super(MultiHeadAttentionEncoder, self).__init__()
         
@@ -160,3 +160,4 @@ class MultiHeadAttentionEncoder(torch.nn.Module):
         params.assert_empty(cls.__name__)
         return cls(input_dim=input_dim,
                    dropout_prob=dropout_prob)
+    

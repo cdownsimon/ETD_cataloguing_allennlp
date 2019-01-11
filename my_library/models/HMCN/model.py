@@ -73,7 +73,11 @@ class HMCNRecurrent(torch.nn.Module):
         
     def forward(self, encoded_sentences):
         encoded_sentences = encoded_sentences.unsqueeze(0) if len(encoded_sentences.size()) < 2 else encoded_sentences
-        x = encoded_sentences.unsqueeze(1).expand(-1, self._num_hierarchy_level, -1)
+        if encoded_sentences.dim() == 3:
+            x = encoded_sentences
+            encoded_sentences = encoded_sentences[:, -1, :]
+        else:    
+            x = encoded_sentences.unsqueeze(1).expand(-1, self._num_hierarchy_level, -1)
         recurrent_output, _ = self._hierarchy_recurrent(x)
         last_hidden_state = recurrent_output[:, -1, :]
         # local weight dimension: C * (h*n)

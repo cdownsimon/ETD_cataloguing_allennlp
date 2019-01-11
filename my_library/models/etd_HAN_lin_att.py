@@ -21,8 +21,8 @@ from my_library.metrics.precision_at_k import *
 from my_library.models.etd_attention import AttentionEncoder, MultiHeadAttentionEncoder, SelfAttentionEncoder
 from my_library.models.customized_allennlp.maxout import Maxout
 
-@Model.register("etd_HAN")
-class EtdHAN(Model):
+@Model.register("etd_HAN_lin_att")
+class EtdHANLinAtt(Model):
     """
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
@@ -46,28 +46,22 @@ class EtdHAN(Model):
                  use_positional_encoding: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(EtdHAN, self).__init__(vocab, regularizer)
+        super(EtdHANLinAtt, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.word_encoder = word_encoder
-        self.word_level_attention = FeedForward(word_encoder.get_output_dim(), 
-                                                2, 
-                                                [word_encoder.get_output_dim(), 1],
-                                                [Activation.by_name("tanh")(), Activation.by_name("linear")()],
-                                                [True, False])
+        self.word_level_attention = AttentionEncoder(word_encoder.get_output_dim(), 
+                                                     'x,y,x*y', 
+                                                     0.0)
 
         self.sentence_encoder = sentence_encoder
-        self.sentence_level_attention = FeedForward(sentence_encoder.get_output_dim(), 
-                                                    2, 
-                                                    [sentence_encoder.get_output_dim(), 1],
-                                                    [Activation.by_name("tanh")(), Activation.by_name("linear")()],
-                                                    [True, False])
+        self.sentence_level_attention = AttentionEncoder(sentence_encoder.get_output_dim(), 
+                                                         'x,y,x*y', 
+                                                         attended_text_dropout)
             
         self.classifier_feedforward = classifier_feedforward
         self.use_positional_encoding = use_positional_encoding
-
-        self._dropout = torch.nn.Dropout(attended_text_dropout)
         
         if text_field_embedder.get_output_dim() != word_encoder.get_input_dim():
             raise ConfigurationError("The output dimension of the text_field_embedder must match the "
@@ -78,9 +72,9 @@ class EtdHAN(Model):
         self.metrics = {
 #             "roc_auc_score": RocAucScore()            
             "hit_5": HitAtK(5),
-            "hit_10": HitAtK(10),
-            "precision_5": PrecisionAtK(5),
-            "precision_10": PrecisionAtK(10)
+            "hit_10": HitAtK(10)
+#             "precision_5": PrecisionAtK(5),
+#             "precision_10": PrecisionAtK(10)
 #             "hit_100": HitAtK(100),
 #             "macro_measure": MacroF1Measure(top_k=5,num_label=self.num_classes)
         }
@@ -105,11 +99,7 @@ class EtdHAN(Model):
             embedded_abstract_text = util.add_positional_features(embedded_abstract_text)
         encoded_abstract_text = self.word_encoder(embedded_abstract_text, abstract_text_mask)
         
-        word_attentive_weights = self.word_level_attention(encoded_abstract_text)
-        word_attentive_weights = util.masked_softmax(word_attentive_weights.transpose(1,2).contiguous(), 
-                                                     abstract_text_mask, dim=2).transpose(1,2).contiguous()
-#         attended_sentences = util.weighted_sum(encoded_abstract_text,word_attentive_weights.squeeze(2))
-        attended_sentences = torch.bmm(encoded_abstract_text.transpose(1,2), word_attentive_weights).squeeze()
+        attended_sentences = self.word_level_attention(encoded_abstract_text, abstract_text_mask)
         
         attended_sentences = attended_sentences.view(num_instance, num_sentence, -1)
         abstract_text_mask = abstract_text_mask.view(num_instance, num_sentence, -1).sum(2).ge(1).long()
@@ -118,12 +108,7 @@ class EtdHAN(Model):
             attended_sentences = util.add_positional_features(attended_sentences)
         attended_sentences = self.sentence_encoder(attended_sentences, abstract_text_mask)
         
-        sentence_attentive_weights = self.sentence_level_attention(attended_sentences)
-        sentence_attentive_weights = util.masked_softmax(sentence_attentive_weights.transpose(1,2).contiguous(), 
-                                                         abstract_text_mask, dim=2).transpose(1,2).contiguous()
-#         attended_abstract_text = util.weighted_sum(attended_sentences,sentence_attentive_weights.squeeze(2))
-        attended_abstract_text = torch.bmm(attended_sentences.transpose(1,2), sentence_attentive_weights).squeeze()
-        attended_abstract_text = self._dropout(attended_abstract_text)
+        attended_abstract_text = self.sentence_level_attention(attended_sentences, abstract_text_mask)
         
         outputs = self.classifier_feedforward(attended_abstract_text)
         logits = torch.sigmoid(outputs)
@@ -160,8 +145,8 @@ class EtdHAN(Model):
         metric_dict['hit_5'] = self.metrics['hit_5'].get_metric(reset)
         metric_dict['hit_10'] = self.metrics['hit_10'].get_metric(reset)
 #         metric_dict['hit_100'] = self.metrics['hit_100'].get_metric(reset)
-        metric_dict['precision_5'] = self.metrics['precision_5'].get_metric(reset)
-        metric_dict['precision_10'] = self.metrics['precision_10'].get_metric(reset)
+#         metric_dict['precision_5'] = self.metrics['precision_5'].get_metric(reset)
+#         metric_dict['precision_10'] = self.metrics['precision_10'].get_metric(reset)
 #         macro_measure = self.metrics['macro_measure'].get_metric(reset)
 #         metric_dict['mac_prec'] = macro_measure[0]
 #         metric_dict['mac_rec'] = macro_measure[1]
@@ -169,7 +154,7 @@ class EtdHAN(Model):
         return metric_dict
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'EtdHAN':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'EtdHANLinAtt':
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)
         word_encoder = Seq2SeqEncoder.from_params(params.pop("word_encoder"))
